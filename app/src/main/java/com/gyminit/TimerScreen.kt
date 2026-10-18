@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -67,12 +68,12 @@ fun TimerScreen(vm: AppViewModel) {
             ) {
                 Mono(label, size = 64, weight = FontWeight.ExtraBold, letterSpacing = (-2).sp, maxLines = 1)
                 Spacer(Modifier.height(12.dp))
-                Mono(
-                    "${Fmt.bar(ratio, 16)} $percent%",
-                    color = if (vm.timerDone) th.red else th.blue,
-                    size = 14,
-                    maxLines = 1,
-                )
+                val barColor = if (vm.timerDone) th.red else th.blue
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    BlockBar(ratio, 16, barColor)
+                    Spacer(Modifier.width(8.dp))
+                    Mono("$percent%", color = barColor, size = 14, maxLines = 1)
+                }
                 Spacer(Modifier.height(12.dp))
                 Mono("// $status · goal ${Fmt.clock(vm.restSec * 1000L)}", color = th.muted, maxLines = 1)
             }

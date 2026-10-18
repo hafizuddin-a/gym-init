@@ -81,7 +81,7 @@ fun StopwatchScreen(vm: AppViewModel) {
                 )
                 Spacer(Modifier.height(12.dp))
                 val minuteRatio = ((elapsed % 60_000L) / 60_000f)
-                Mono(Fmt.bar(minuteRatio, 20), color = th.green, size = 14, maxLines = 1)
+                BlockBar(minuteRatio, 20, th.green)
                 Spacer(Modifier.height(12.dp))
                 Mono("// lap ${laps.size + 1} · ${Fmt.stopwatch(currentLap)}", color = th.muted, maxLines = 1)
             }

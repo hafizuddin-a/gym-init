@@ -23,9 +23,14 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.window.DialogWindowProvider
+import androidx.core.view.WindowCompat
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -125,7 +130,7 @@ fun HomeScreen(vm: AppViewModel) {
                 Mono("// last 12 weeks", color = th.muted)
                 Spacer(Modifier.height(6.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Mono(weeks.joinToString("") { if (it) "▓" else "░" }, color = th.green, size = 14, maxLines = 1)
+                    BlockBar(weeks, th.green)
                     Spacer(Modifier.width(8.dp))
                     Mono("${weeks.count { it }}/12", size = 14, weight = FontWeight.Bold, maxLines = 1)
                 }
@@ -155,6 +160,13 @@ private fun ThemePicker(vm: AppViewModel) {
         dragHandle = null,
         shape = RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp),
     ) {
+        // The sheet lives in its own window; match its nav bar to the panel colour.
+        val view = LocalView.current
+        SideEffect {
+            val window = (view.parent as? DialogWindowProvider)?.window ?: return@SideEffect
+            window.navigationBarColor = th.panel.toArgb()
+            WindowCompat.getInsetsController(window, view).isAppearanceLightNavigationBars = !th.dark
+        }
         Column(
             Modifier
                 .navigationBarsPadding()

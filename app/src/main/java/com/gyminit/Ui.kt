@@ -222,3 +222,26 @@ fun TermField(
         },
     )
 }
+
+/**
+ * Progress bar drawn as solid cells. Replaces the █/░ glyphs, which fall back to a
+ * system font (stippled, misaligned) because the bundled JetBrains Mono is latin-only.
+ */
+@Composable
+fun BlockBar(cells: List<Boolean>, color: Color, modifier: Modifier = Modifier) {
+    Row(modifier, horizontalArrangement = Arrangement.spacedBy(1.dp)) {
+        cells.forEach { on ->
+            Box(
+                Modifier
+                    .size(width = 8.dp, height = 14.dp)
+                    .background(if (on) color else color.copy(alpha = 0.22f)),
+            )
+        }
+    }
+}
+
+@Composable
+fun BlockBar(ratio: Float, width: Int, color: Color, modifier: Modifier = Modifier) {
+    val filled = Math.round(ratio.coerceIn(0f, 1f) * width)
+    BlockBar(List(width) { it < filled }, color, modifier)
+}

@@ -6,7 +6,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -31,11 +34,13 @@ import androidx.compose.ui.unit.dp
 
 private fun cleanNumber(v: String): String = v.replace(',', '.').filter { it.isDigit() || it == '.' }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun WorkoutScreen(vm: AppViewModel) {
     val th = LocalTheme.current
     var confirmDelete by remember { mutableStateOf(false) }
     val editing = vm.editingId != null
+    val keyboardOpen = WindowInsets.isImeVisible
 
     Column(Modifier.fillMaxSize()) {
         Row(
@@ -173,7 +178,7 @@ fun WorkoutScreen(vm: AppViewModel) {
                 Mono("// volume", color = th.muted)
                 Spacer(Modifier.height(6.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Mono(Fmt.bar(ratio, 16), color = th.green, size = 14, maxLines = 1)
+                    BlockBar(ratio, 16, th.green)
                     Spacer(Modifier.width(8.dp))
                     Mono("${Fmt.kg(volume)} kg", size = 14, weight = FontWeight.Bold, maxLines = 1)
                 }
@@ -183,23 +188,25 @@ fun WorkoutScreen(vm: AppViewModel) {
             }
         }
 
-        Mono("// tools", color = th.muted, modifier = Modifier.padding(start = 16.dp, bottom = 8.dp, top = 4.dp))
-        Row(
-            Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
-            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp),
-        ) {
-            ToolButton(
-                "[stopwatch]",
-                Fmt.clock(vm.swElapsed),
-                { vm.goStopwatch() },
-                Modifier.weight(1f),
-            )
-            ToolButton(
-                "[timer]",
-                Fmt.clock(vm.timerRemaining),
-                { vm.goTimer() },
-                Modifier.weight(1f),
-            )
+        if (!keyboardOpen) {
+            Mono("// tools", color = th.muted, modifier = Modifier.padding(start = 16.dp, bottom = 8.dp, top = 4.dp))
+            Row(
+                Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
+                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp),
+            ) {
+                ToolButton(
+                    "[stopwatch]",
+                    Fmt.clock(vm.swElapsed),
+                    { vm.goStopwatch() },
+                    Modifier.weight(1f),
+                )
+                ToolButton(
+                    "[timer]",
+                    Fmt.clock(vm.timerRemaining),
+                    { vm.goTimer() },
+                    Modifier.weight(1f),
+                )
+            }
         }
     }
 

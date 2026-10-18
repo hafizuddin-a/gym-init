@@ -5,16 +5,15 @@ See README.md for screens, themes and structure.
 
 ## Status
 
-- The code was written in a cloud sandbox that could NOT reach the Android SDK or AndroidX
-  (dl.google.com blocked), so **it has never been compiled or run**.
-- First job locally: `./gradlew assembleDebug`, fix any compile errors, then run it on an
-  emulator/device and click through all four screens (Workout, Home, Stopwatch, Timer).
-- Things worth checking on a real run:
-  - Edge-to-edge insets (status bar / nav bar / keyboard) on API 35.
-  - The ASCII bar glyphs (█ ░ ▓) and ✓: the bundled JetBrains Mono is the latin subset, so these fall back to a system font and may misalign.
-  - Text fields in the Workout grid: focus, keyboard Next, numeric filtering.
-  - Theme bottom sheet (Home → [theme]) and that every screen re-themes.
-  - Timer end: beep + vibration; stopwatch/timer keep running across screens.
+- Builds and runs: `./gradlew assembleDebug` is green; clicked through all four screens
+  (Workout, Home, Stopwatch, Timer), the theme sheet and a running timer on a Pixel 9 emulator (API 36).
+- Needs **JDK 17** (Gradle 8.10 / Kotlin 2.0 break on JDK 25, which is what Android Studio's
+  bundled JBR is now). On macOS: `brew install openjdk@17`, then
+  `JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home`.
+- Progress bars are drawn by `BlockBar` (Ui.kt), not █/░ glyphs: the bundled JetBrains Mono is the
+  latin subset, so those glyphs fell back to a system font and rendered stippled.
+- The tools row on the Workout screen hides while the keyboard is open (it overlapped the volume block).
+- Not verified yet: the timer-end beep/vibration, light themes on a device, API 26-30 devices.
 
 ## Design rules to keep
 

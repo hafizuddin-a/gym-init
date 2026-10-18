@@ -35,7 +35,7 @@ solarized light, github light, catppuccin latte.
 
 ## Build
 
-Requires JDK 17 and the Android SDK (platform 35).
+Requires JDK 17 (not 21+/25) and the Android SDK (platform 35).
 
 ```sh
 ./gradlew assembleDebug

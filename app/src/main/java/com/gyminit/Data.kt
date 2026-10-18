@@ -113,11 +113,6 @@ object Fmt {
         return fmt(if (year == thisYear) "MMMM" else "MMMM yyyy", ts)
     }
 
-    fun bar(ratio: Float, width: Int): String {
-        val filled = Math.round(ratio.coerceIn(0f, 1f) * width)
-        return "█".repeat(filled) + "░".repeat(width - filled)
-    }
-
     fun summary(rows: List<LiftRow>): String {
         val names = rows.map { it.name }
         return if (names.size <= 2) names.joinToString(", ") else names.take(2).joinToString(", ") + " +${names.size - 2}"
