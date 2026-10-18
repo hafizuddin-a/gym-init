@@ -49,10 +49,6 @@ fun WorkoutScreen(vm: AppViewModel) {
         ) {
             BackButton { vm.goHome() }
             Prompt(if (editing) "session --edit" else "session --new", Modifier.weight(1f))
-            if (editing) {
-                TermButton("[del]", th.red, { confirmDelete = true }, filled = false)
-                Spacer(Modifier.width(8.dp))
-            }
             TermButton("[save]", th.amber, { vm.save() }, filled = false)
         }
 
@@ -189,23 +185,34 @@ fun WorkoutScreen(vm: AppViewModel) {
         }
 
         if (!keyboardOpen) {
-            Mono("// tools", color = th.muted, modifier = Modifier.padding(start = 16.dp, bottom = 8.dp, top = 4.dp))
-            Row(
-                Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
-                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp),
-            ) {
-                ToolButton(
-                    "[stopwatch]",
-                    Fmt.clock(vm.swElapsed),
-                    { vm.goStopwatch() },
-                    Modifier.weight(1f),
-                )
-                ToolButton(
-                    "[timer]",
-                    Fmt.clock(vm.timerRemaining),
-                    { vm.goTimer() },
-                    Modifier.weight(1f),
-                )
+            if (editing) {
+                Mono("// danger", color = th.muted, modifier = Modifier.padding(start = 16.dp, bottom = 8.dp, top = 4.dp))
+                Row(
+                    Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
+                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp),
+                ) {
+                    TermButton("[del]", th.red, { confirmDelete = true }, Modifier.weight(1f), height = 56.dp)
+                    Spacer(Modifier.weight(1f))
+                }
+            } else {
+                Mono("// tools", color = th.muted, modifier = Modifier.padding(start = 16.dp, bottom = 8.dp, top = 4.dp))
+                Row(
+                    Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
+                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp),
+                ) {
+                    ToolButton(
+                        "[stopwatch]",
+                        Fmt.clock(vm.swElapsed),
+                        { vm.goStopwatch() },
+                        Modifier.weight(1f),
+                    )
+                    ToolButton(
+                        "[timer]",
+                        Fmt.clock(vm.timerRemaining),
+                        { vm.goTimer() },
+                        Modifier.weight(1f),
+                    )
+                }
             }
         }
     }
