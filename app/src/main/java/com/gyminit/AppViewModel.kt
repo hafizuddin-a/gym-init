@@ -77,8 +77,28 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     val bestVolume: Double
         get() = sessions.maxOfOrNull { it.volume } ?: 0.0
 
+    /** Set once the user edits the grid; pre-filled names from the last session don't count. */
+    private var touched by mutableStateOf(false)
+
+    /** True when the workout screen holds something worth coming back to. */
+    val hasDraft: Boolean
+        get() = touched && editingId == null
+
     init {
-        newSession()
+        val saved = store.loadDraft()
+        if (saved != null && saved.rows.isNotEmpty()) {
+            saved.rows.forEach { draft.add(it.copy(id = nextId++)) }
+            editingId = saved.editingId
+            sessionTs = saved.timestamp
+            touched = true
+        } else {
+            newSession()
+        }
+    }
+
+    private fun persistDraft() {
+        if (touched || editingId != null) store.saveDraft(Draft(editingId, sessionTs, draft.toList()))
+        else store.clearDraft()
     }
 
     private fun blankRow() = LiftRow(id = nextId++)
@@ -96,28 +116,46 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
         editingId = null
         sessionTs = System.currentTimeMillis()
+        store.clearDraft()
+        touched = false
+        screen = Screen.Workout
+    }
+
+    /** Back to the workout screen without touching the draft. */
+    fun resume() {
         screen = Screen.Workout
     }
 
     fun edit(s: Session) {
+        if (editingId == s.id) {
+            screen = Screen.Workout
+            return
+        }
         draft.clear()
         s.rows.forEach { draft.add(it.copy(id = nextId++)) }
         editingId = s.id
         sessionTs = s.timestamp
+        persistDraft()
         screen = Screen.Workout
     }
 
     fun addRow() {
         draft.add(blankRow())
+        touched = true
+        persistDraft()
     }
 
     fun updateRow(index: Int, row: LiftRow) {
         if (index in draft.indices) draft[index] = row
+        touched = true
+        persistDraft()
     }
 
     fun removeRow(index: Int) {
         if (index in draft.indices) draft.removeAt(index)
         if (draft.isEmpty()) draft.add(blankRow())
+        touched = true
+        persistDraft()
     }
 
     fun save() {
@@ -128,7 +166,22 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             sessions = (sessions.filter { it.id != id } + saved).sortedByDescending { it.timestamp }
             store.save(sessions)
         }
+        resetDraftAfterLeaving()
         screen = Screen.Home
+    }
+
+    private fun resetDraftAfterLeaving() {
+        store.clearDraft()
+        touched = false
+        val base = sessions.firstOrNull()?.rows?.filter { it.name.isNotBlank() } ?: emptyList()
+        draft.clear()
+        if (base.isEmpty()) {
+            repeat(3) { draft.add(blankRow()) }
+        } else {
+            base.forEach { draft.add(LiftRow(nextId++, it.name, "", "", it.weight, it.reps)) }
+        }
+        editingId = null
+        sessionTs = System.currentTimeMillis()
     }
 
     fun deleteCurrent() {
@@ -137,6 +190,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             sessions = sessions.filter { it.id != id }
             store.save(sessions)
         }
+        resetDraftAfterLeaving()
         screen = Screen.Home
     }
 

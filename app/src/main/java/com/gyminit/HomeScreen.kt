@@ -19,11 +19,16 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -41,6 +46,7 @@ private const val WEEK_MS = 7L * 24 * 60 * 60 * 1000
 fun HomeScreen(vm: AppViewModel) {
     val th = LocalTheme.current
     val sessions = vm.sessions
+    var confirmNew by remember { mutableStateOf(false) }
     val now = System.currentTimeMillis()
     val thisMonth = Fmt.monthKey(now)
     val monthCount = sessions.count { Fmt.monthKey(it.timestamp) == thisMonth }
@@ -83,10 +89,43 @@ fun HomeScreen(vm: AppViewModel) {
                     VLine()
                     HeadCell("volume", Modifier.width(84.dp), end = true)
                 }
-                if (sessions.isEmpty()) {
+                if (sessions.isEmpty() && !vm.hasDraft) {
                     HLine()
                     Box(Modifier.fillMaxWidth().padding(16.dp)) {
                         Mono("// no sessions yet — tap [+] new session", color = th.muted)
+                    }
+                }
+                if (vm.hasDraft) {
+                    HLine()
+                    Box(
+                        Modifier.fillMaxWidth().background(th.surf).padding(horizontal = 10.dp, vertical = 8.dp),
+                    ) {
+                        Mono("// in progress", color = th.green, size = 12, weight = FontWeight.Bold)
+                    }
+                    HLine()
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .height(52.dp)
+                            .clickable(onClickLabel = "Resume unsaved session", role = Role.Button) { vm.resume() },
+                    ) {
+                        Box(
+                            Modifier.width(96.dp).fillMaxHeight().padding(horizontal = 10.dp),
+                            contentAlignment = Alignment.CenterStart,
+                        ) { Mono(Fmt.dayLabel(vm.sessionTs), color = th.green, weight = FontWeight.Bold, maxLines = 1) }
+                        VLine()
+                        Box(
+                            Modifier.weight(1f).fillMaxHeight().padding(horizontal = 10.dp),
+                            contentAlignment = Alignment.CenterStart,
+                        ) {
+                            val named = vm.draft.filter { it.name.isNotBlank() }
+                            Mono(if (named.isEmpty()) "(unsaved)" else Fmt.summary(named), maxLines = 1)
+                        }
+                        VLine()
+                        Box(
+                            Modifier.width(84.dp).fillMaxHeight().padding(horizontal = 10.dp),
+                            contentAlignment = Alignment.CenterEnd,
+                        ) { Mono(Fmt.kg(vm.draftVolume), weight = FontWeight.Bold, maxLines = 1) }
                     }
                 }
                 var lastMonth = ""
@@ -140,13 +179,28 @@ fun HomeScreen(vm: AppViewModel) {
         TermButton(
             "[+] new session",
             th.green,
-            { vm.newSession() },
+            { if (vm.hasDraft) confirmNew = true else vm.newSession() },
             Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
             height = 56.dp,
         )
     }
 
     if (vm.pickerOpen) ThemePicker(vm)
+
+    if (confirmNew) {
+        AlertDialog(
+            onDismissRequest = { confirmNew = false },
+            containerColor = th.panel,
+            title = { Mono("> discard unsaved session?", size = 16, weight = FontWeight.Bold) },
+            text = { Mono("// tap the [in progress] row to resume it instead", color = th.muted) },
+            confirmButton = {
+                TermButton("[discard]", th.red, { confirmNew = false; vm.newSession() }, filled = false)
+            },
+            dismissButton = {
+                TermButton("[resume]", th.green, { confirmNew = false; vm.resume() }, filled = false)
+            },
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

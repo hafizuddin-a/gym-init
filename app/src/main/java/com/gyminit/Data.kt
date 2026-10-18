@@ -23,6 +23,9 @@ data class Session(val id: Long, val timestamp: Long, val rows: List<LiftRow>) {
         get() = rows.sumOf { (it.weight.toDoubleOrNull() ?: 0.0) * (it.reps.toDoubleOrNull() ?: 0.0) }
 }
 
+/** Unsaved workout, kept so it survives leaving the screen or the app being killed. */
+data class Draft(val editingId: Long?, val timestamp: Long, val rows: List<LiftRow>)
+
 /** Sessions live in one small JSON file; preferences hold the theme and rest time. */
 class Store(private val context: Context) {
     private val file get() = File(context.filesDir, "sessions.json")
@@ -76,6 +79,46 @@ class Store(private val context: Context) {
             tmp.delete()
         }
     }
+
+    fun loadDraft(): Draft? = try {
+        prefs.getString("draft", null)?.let { raw ->
+            val o = JSONObject(raw)
+            val rows = o.getJSONArray("rows")
+            Draft(
+                editingId = if (o.has("editing")) o.getLong("editing") else null,
+                timestamp = o.getLong("ts"),
+                rows = (0 until rows.length()).map { j ->
+                    val r = rows.getJSONObject(j)
+                    LiftRow(
+                        id = j.toLong(),
+                        name = r.getString("name"),
+                        weight = r.getString("weight"),
+                        reps = r.getString("reps"),
+                        hintWeight = r.optString("hw"),
+                        hintReps = r.optString("hr"),
+                    )
+                },
+            )
+        }
+    } catch (e: Exception) {
+        null
+    }
+
+    fun saveDraft(draft: Draft) {
+        val rows = JSONArray()
+        draft.rows.forEach { r ->
+            rows.put(
+                JSONObject()
+                    .put("name", r.name).put("weight", r.weight).put("reps", r.reps)
+                    .put("hw", r.hintWeight).put("hr", r.hintReps),
+            )
+        }
+        val o = JSONObject().put("ts", draft.timestamp).put("rows", rows)
+        draft.editingId?.let { o.put("editing", it) }
+        prefs.edit().putString("draft", o.toString()).apply()
+    }
+
+    fun clearDraft() = prefs.edit().remove("draft").apply()
 
     var themeIdx: Int
         get() = prefs.getInt("theme", 0)
