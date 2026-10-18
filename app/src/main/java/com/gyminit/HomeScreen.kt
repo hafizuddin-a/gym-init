@@ -192,7 +192,7 @@ fun HomeScreen(vm: AppViewModel) {
             onDismissRequest = { confirmNew = false },
             containerColor = th.panel,
             title = { Mono("> discard unsaved session?", size = 16, weight = FontWeight.Bold) },
-            text = { Mono("// tap the [in progress] row to resume it instead", color = th.muted) },
+            text = { Mono("// or tap the in-progress row to resume it", color = th.muted) },
             confirmButton = {
                 TermButton("[discard]", th.red, { confirmNew = false; vm.newSession() }, filled = false)
             },
