@@ -48,6 +48,9 @@ fun WorkoutScreen(vm: AppViewModel) {
     val th = LocalTheme.current
     var confirmDelete by remember { mutableStateOf(false) }
     val editing = vm.editingId != null
+    // a saved session being continued gets the normal workout layout (tools, no delete)
+    val continued = editing && vm.continuing
+    val plainEdit = editing && !continued
     val keyboardOpen = WindowInsets.isImeVisible
 
     Column(Modifier.fillMaxSize()) {
@@ -56,7 +59,7 @@ fun WorkoutScreen(vm: AppViewModel) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             BackButton { vm.goHome() }
-            Prompt(if (editing) "session --edit" else "session --new", Modifier.weight(1f))
+            Prompt(if (continued) "session --resume" else if (editing) "session --edit" else "session --new", Modifier.weight(1f))
             TermButton("[save]", th.amber, { vm.save() }, filled = false)
         }
 
@@ -65,7 +68,7 @@ fun WorkoutScreen(vm: AppViewModel) {
         ) {
             Column(Modifier.padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 16.dp)) {
                 Mono(
-                    if (editing) "> edit session" else "> today's session",
+                    if (continued) "> current session" else if (editing) "> edit session" else "> today's session",
                     size = 26,
                     weight = FontWeight.ExtraBold,
                     maxLines = 1,
@@ -193,14 +196,14 @@ fun WorkoutScreen(vm: AppViewModel) {
         }
 
         if (!keyboardOpen) {
-            if (editing) {
+            if (plainEdit) {
                 Mono("// danger", color = th.muted, modifier = Modifier.padding(start = 16.dp, bottom = 8.dp, top = 4.dp))
                 Row(
                     Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
                     horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp),
                 ) {
                     TermButton("[del]", th.red, { confirmDelete = true }, Modifier.weight(1f), height = 56.dp)
-                    TermButton("[resume]", th.green, { vm.resume() }, Modifier.weight(1f), height = 56.dp)
+                    TermButton("[resume]", th.green, { vm.continueSession() }, Modifier.weight(1f), height = 56.dp)
                 }
             } else {
                 Mono("// tools", color = th.muted, modifier = Modifier.padding(start = 16.dp, bottom = 8.dp, top = 4.dp))

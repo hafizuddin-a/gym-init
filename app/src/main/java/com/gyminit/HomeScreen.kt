@@ -58,7 +58,13 @@ private sealed interface HomeRow {
     }
 
     /** Display strings are computed once when the list is built, not on every scroll frame. */
-    data class Done(val session: Session, val date: String, val exercises: String, val volume: String) : HomeRow {
+    data class Done(
+        val session: Session,
+        val date: String,
+        val exercises: String,
+        val volume: String,
+        val active: Boolean,
+    ) : HomeRow {
         override val key get() = "s-${session.id}"
     }
 
@@ -138,7 +144,10 @@ fun HomeScreen(vm: AppViewModel) {
         }
     }
 
-    val rows = remember(sessions, progress) {
+    // the saved session being continued is shown in the in-progress colour
+    val activeId = if (vm.continuing) vm.editingId else null
+
+    val rows = remember(sessions, progress, activeId) {
         buildList {
             if (progress != null) {
                 add(HomeRow.ProgressHeader)
@@ -152,7 +161,7 @@ fun HomeScreen(vm: AppViewModel) {
                     lastMonth = key
                     add(HomeRow.Month(Fmt.monthLabel(s.timestamp)))
                 }
-                add(HomeRow.Done(s, Fmt.dayLabel(s.timestamp), Fmt.summary(s.rows), Fmt.kg(s.volume)))
+                add(HomeRow.Done(s, Fmt.dayLabel(s.timestamp), Fmt.summary(s.rows), Fmt.kg(s.volume), s.id == activeId))
             }
         }
     }
@@ -215,7 +224,7 @@ fun HomeScreen(vm: AppViewModel) {
 
                         is HomeRow.Done -> SessionLine(
                             date = row.date,
-                            dateColor = th.blue,
+                            dateColor = if (row.active) th.green else th.blue,
                             exercises = row.exercises,
                             volume = row.volume,
                             clickLabel = null,

@@ -88,8 +88,21 @@ class Store(private val context: Context) {
         }
     }
 
-    fun loadDraft(): Draft? = try {
-        prefs.getString("draft", null)?.let { raw ->
+    fun loadDraft(): Draft? = readDraft("draft")
+
+    fun saveDraft(draft: Draft) = writeDraft("draft", draft)
+
+    fun clearDraft() = prefs.edit().remove("draft").apply()
+
+    /** A saved session being continued after an accidental save; kept apart from the unsaved new session. */
+    fun loadContinued(): Draft? = readDraft("continued")
+
+    fun saveContinued(draft: Draft) = writeDraft("continued", draft)
+
+    fun clearContinued() = prefs.edit().remove("continued").apply()
+
+    private fun readDraft(key: String): Draft? = try {
+        prefs.getString(key, null)?.let { raw ->
             val o = JSONObject(raw)
             val rows = o.getJSONArray("rows")
             Draft(
@@ -112,7 +125,7 @@ class Store(private val context: Context) {
         null
     }
 
-    fun saveDraft(draft: Draft) {
+    private fun writeDraft(key: String, draft: Draft) {
         val rows = JSONArray()
         draft.rows.forEach { r ->
             rows.put(
@@ -123,10 +136,8 @@ class Store(private val context: Context) {
         }
         val o = JSONObject().put("ts", draft.timestamp).put("rows", rows)
         draft.editingId?.let { o.put("editing", it) }
-        prefs.edit().putString("draft", o.toString()).apply()
+        prefs.edit().putString(key, o.toString()).apply()
     }
-
-    fun clearDraft() = prefs.edit().remove("draft").apply()
 
     var themeIdx: Int
         get() = prefs.getInt("theme", 0)

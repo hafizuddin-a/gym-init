@@ -94,19 +94,39 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     val hasDraft: Boolean
         get() = inProgress != null
 
+    /**
+     * True while a saved session is being continued (after an accidental save): the workout
+     * screen shows its normal tools again and edits are autosaved so they survive the app dying.
+     */
+    var continuing by mutableStateOf(false)
+        private set
+
     init {
         val saved = store.loadDraft()
-        if (saved != null && saved.rows.isNotEmpty()) {
+        val cont = store.loadContinued()
+        if (cont?.editingId != null && sessions.any { it.id == cont.editingId }) {
+            cont.rows.forEach { draft.add(it.copy(id = nextId++)) }
+            editingId = cont.editingId
+            sessionTs = cont.timestamp
+            continuing = true
+            parked = saved?.takeIf { d -> d.rows.any { !it.isBlank() } }
+        } else if (saved != null && saved.rows.isNotEmpty()) {
+            store.clearContinued()
             saved.rows.forEach { draft.add(it.copy(id = nextId++)) }
             sessionTs = saved.timestamp
         } else {
+            store.clearContinued()
             blankDraft()
         }
     }
 
-    /** Only the unsaved new session is persisted; edits to saved sessions are not. */
+    /** New session: stored as the draft. Continued saved session: stored apart. Plain edits aren't stored. */
     private fun persistDraft() {
-        if (editingId != null) return
+        val id = editingId
+        if (id != null) {
+            if (continuing) store.saveContinued(Draft(id, sessionTs, draft.toList()))
+            return
+        }
         val d = inProgress
         if (d != null) store.saveDraft(d) else store.clearDraft()
     }
@@ -129,6 +149,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private fun restoreOrBlank() {
         val p = parked
         parked = null
+        continuing = false
+        store.clearContinued()
         if (p != null) {
             draft.clear()
             p.rows.forEach { draft.add(it.copy(id = nextId++)) }
@@ -141,6 +163,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** A new session always starts empty; any unsaved one is discarded. */
     fun newSession() {
+        commitContinued()
+        continuing = false
+        store.clearContinued()
         parked = null
         blankDraft()
         store.clearDraft()
@@ -149,8 +174,18 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Go to the unsaved new session (leaving an edit if one is open). */
     fun resume() {
-        if (editingId != null) restoreOrBlank()
+        if (editingId != null) {
+            commitContinued()
+            restoreOrBlank()
+        }
         screen = Screen.Workout
+    }
+
+    /** Switch an opened saved session to the normal workout screen and keep working on it. */
+    fun continueSession() {
+        if (editingId == null) return
+        continuing = true
+        persistDraft()
     }
 
     fun edit(s: Session) {
@@ -158,6 +193,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             screen = Screen.Workout
             return
         }
+        commitContinued()
+        continuing = false
+        store.clearContinued()
         if (editingId == null) parked = inProgress
         draft.clear()
         s.rows.forEach { draft.add(it.copy(id = nextId++)) }
@@ -182,7 +220,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         persistDraft()
     }
 
-    fun save() {
+    /** Writes the screen's rows into the sessions list (a new session or the one being edited). */
+    private fun writeSession() {
         // keep any row with data, even without a name, so typed numbers are never dropped
         val rows = draft.filter { !it.isBlank() }.map { it.copy(name = it.name.trim().ifEmpty { "unnamed" }) }
         if (rows.isNotEmpty()) {
@@ -191,6 +230,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             sessions = (sessions.filter { it.id != id } + saved).sortedByDescending { it.timestamp }
             store.save(sessions)
         }
+    }
+
+    /** Leaving a continued session for another screen keeps its changes. */
+    private fun commitContinued() {
+        if (editingId != null && continuing) writeSession()
+    }
+
+    fun save() {
+        writeSession()
         afterLeavingSession()
     }
 
@@ -205,6 +253,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** After save/delete: an edit hands the screen back to the parked draft; a new session is done. */
     private fun afterLeavingSession() {
+        continuing = false
+        store.clearContinued()
         if (editingId != null) {
             restoreOrBlank()
         } else {
