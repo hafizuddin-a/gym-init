@@ -202,6 +202,22 @@ fun HomeScreen(vm: AppViewModel) {
                 }
             }
 
+            item(key = "weeks") {
+                Column(Modifier.padding(start = 20.dp, end = 20.dp, top = 0.dp, bottom = 16.dp)) {
+                    Mono("// last 12 weeks", color = th.muted)
+                    Spacer(Modifier.height(6.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        BlockBar(weeks, th.green)
+                        Spacer(Modifier.width(8.dp))
+                        Mono("${weeks.count { it }}/12", size = 14, weight = FontWeight.Bold, maxLines = 1)
+                    }
+                    if (bestHolds.isNotEmpty()) {
+                        Spacer(Modifier.height(6.dp))
+                        Mono("// best holds · $bestHolds", color = th.amber)
+                    }
+                }
+            }
+
             item(key = "head") {
                 Box(Modifier.padding(horizontal = 16.dp).fillMaxWidth().tableEdges(th.border, first = true, last = false)) {
                     Row(Modifier.fillMaxWidth().height(38.dp).background(th.panel)) {
@@ -250,21 +266,6 @@ fun HomeScreen(vm: AppViewModel) {
                 }
             }
 
-            item(key = "weeks") {
-                Column(Modifier.padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 16.dp)) {
-                    Mono("// last 12 weeks", color = th.muted)
-                    Spacer(Modifier.height(6.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        BlockBar(weeks, th.green)
-                        Spacer(Modifier.width(8.dp))
-                        Mono("${weeks.count { it }}/12", size = 14, weight = FontWeight.Bold, maxLines = 1)
-                    }
-                    if (bestHolds.isNotEmpty()) {
-                        Spacer(Modifier.height(6.dp))
-                        Mono("// best holds · $bestHolds", color = th.amber)
-                    }
-                }
-            }
         }
 
         TermButton(

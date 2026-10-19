@@ -31,7 +31,7 @@ fun TimerScreen(vm: AppViewModel) {
     val ratio = if (vm.timerTotalMs > 0) remaining / vm.timerTotalMs.toFloat() else 0f
     val percent = Math.round(ratio.coerceIn(0f, 1f) * 100)
     val status = when {
-        vm.timerDone -> "done — rest over"
+        vm.timerDone -> "done"
         vm.timerRunning -> "running"
         remaining < vm.timerTotalMs -> "paused"
         else -> "ready"
@@ -44,14 +44,14 @@ fun TimerScreen(vm: AppViewModel) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             BackButton { vm.goWorkout() }
-            Prompt("timer --rest", Modifier.weight(1f))
+            Prompt("timer", Modifier.weight(1f))
         }
 
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
             Column(Modifier.padding(start = 20.dp, end = 20.dp, top = 20.dp)) {
-                Mono("> rest timer", size = 26, weight = FontWeight.ExtraBold, maxLines = 1)
+                Mono("> timer", size = 26, weight = FontWeight.ExtraBold, maxLines = 1)
                 Spacer(Modifier.height(6.dp))
-                Mono("// time between sets", color = th.muted)
+                Mono("// count down to zero", color = th.muted)
             }
 
             val shape = RoundedCornerShape(4.dp)
