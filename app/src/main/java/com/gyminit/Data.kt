@@ -58,6 +58,11 @@ class Store(private val context: Context) {
             }
         }
     } catch (e: Exception) {
+        // unreadable file: keep a copy so the next save can't destroy the only evidence
+        try {
+            file.copyTo(File(context.filesDir, "sessions.corrupt.json"), overwrite = true)
+        } catch (_: Exception) {
+        }
         emptyList()
     }
 

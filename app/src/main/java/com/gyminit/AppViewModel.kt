@@ -113,6 +113,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun blankRow() = LiftRow(id = nextId++)
 
+    /** Called when the app returns to the foreground: an untouched blank session gets today's date. */
+    fun onAppResumed() {
+        if (editingId == null && inProgress == null) sessionTs = System.currentTimeMillis()
+    }
+
     private fun blankDraft() {
         draft.clear()
         repeat(3) { draft.add(blankRow()) }
@@ -178,7 +183,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun save() {
-        val rows = draft.filter { it.name.isNotBlank() }
+        // keep any row with data, even without a name, so typed numbers are never dropped
+        val rows = draft.filter { !it.isBlank() }.map { it.copy(name = it.name.trim().ifEmpty { "unnamed" }) }
         if (rows.isNotEmpty()) {
             val id = editingId ?: System.currentTimeMillis()
             val saved = Session(id, sessionTs, rows)
@@ -269,6 +275,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         private set
     private var timerBase by mutableLongStateOf(restSec * 1000L)
     private var timerEnd = 0L
+
+    /** Remaining time for display: rounds up while counting down so it reads 00:01 until it hits zero. */
+    val timerDisplayMs: Long
+        get() = if (timerRunning) timerRemaining + 999 else timerRemaining
 
     val timerRemaining: Long
         get() = if (timerRunning) (timerEnd - now).coerceAtLeast(0) else timerBase

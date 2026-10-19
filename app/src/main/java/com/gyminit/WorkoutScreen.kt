@@ -32,7 +32,15 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
-private fun cleanNumber(v: String): String = v.replace(',', '.').filter { it.isDigit() || it == '.' }
+/** Digits with at most one '.' and two decimals (weights); digits only for reps. */
+private fun cleanNumber(v: String, decimal: Boolean): String {
+    val s = v.replace(',', '.').filter { it.isDigit() || (decimal && it == '.') }
+    val dot = s.indexOf('.')
+    if (dot < 0) return s
+    val whole = s.substring(0, dot)
+    val frac = s.substring(dot + 1).replace(".", "").take(2)
+    return "$whole.$frac"
+}
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -112,7 +120,7 @@ fun WorkoutScreen(vm: AppViewModel) {
                         ) {
                             TermField(
                                 value = row.weight,
-                                onChange = { vm.updateRow(index, row.copy(weight = cleanNumber(it))) },
+                                onChange = { vm.updateRow(index, row.copy(weight = cleanNumber(it, decimal = true))) },
                                 label = "Exercise ${index + 1} weight in kilograms",
                                 hint = row.hintWeight.ifEmpty { "0" },
                                 numeric = true,
@@ -128,7 +136,7 @@ fun WorkoutScreen(vm: AppViewModel) {
                         ) {
                             TermField(
                                 value = row.reps,
-                                onChange = { vm.updateRow(index, row.copy(reps = cleanNumber(it))) },
+                                onChange = { vm.updateRow(index, row.copy(reps = cleanNumber(it, decimal = false))) },
                                 label = "Exercise ${index + 1} reps",
                                 hint = row.hintReps.ifEmpty { "0" },
                                 numeric = true,
@@ -212,7 +220,7 @@ fun WorkoutScreen(vm: AppViewModel) {
                     )
                     ToolButton(
                         "[timer]",
-                        Fmt.clock(vm.timerRemaining),
+                        Fmt.clock(vm.timerDisplayMs),
                         { vm.goTimer() },
                         Modifier.weight(1f),
                     )

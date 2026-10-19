@@ -36,8 +36,7 @@ fun TimerScreen(vm: AppViewModel) {
         remaining < vm.timerTotalMs -> "paused"
         else -> "ready"
     }
-    // round up while counting down so the display reads 00:01 until it really hits zero
-    val label = Fmt.clock(if (vm.timerRunning) remaining + 999 else remaining)
+    val label = Fmt.clock(vm.timerDisplayMs)
 
     Column(Modifier.fillMaxSize()) {
         Row(

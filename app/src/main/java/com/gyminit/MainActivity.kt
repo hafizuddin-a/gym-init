@@ -28,6 +28,11 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent { GymApp(vm) }
     }
+
+    override fun onResume() {
+        super.onResume()
+        vm.onAppResumed()
+    }
 }
 
 @Composable
