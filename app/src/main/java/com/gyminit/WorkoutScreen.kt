@@ -200,11 +200,7 @@ fun WorkoutScreen(vm: AppViewModel) {
                     horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp),
                 ) {
                     TermButton("[del]", th.red, { confirmDelete = true }, Modifier.weight(1f), height = 56.dp)
-                    if (vm.hasDraft) {
-                        TermButton("[resume]", th.green, { vm.resume() }, Modifier.weight(1f), height = 56.dp)
-                    } else {
-                        Spacer(Modifier.weight(1f))
-                    }
+                    TermButton("[resume]", th.green, { vm.resume() }, Modifier.weight(1f), height = 56.dp)
                 }
             } else {
                 Mono("// tools", color = th.muted, modifier = Modifier.padding(start = 16.dp, bottom = 8.dp, top = 4.dp))

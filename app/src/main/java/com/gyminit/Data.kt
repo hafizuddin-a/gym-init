@@ -149,8 +149,16 @@ object Fmt {
 
     fun stopwatch(ms: Long): String = clock(ms) + centis(ms)
 
-    private fun fmt(pattern: String, ts: Long): String =
-        SimpleDateFormat(pattern, Locale.ENGLISH).format(Date(ts)).lowercase(Locale.ENGLISH)
+    // SimpleDateFormat is costly to build and not thread-safe: keep one per pattern per thread.
+    private val formats = object : ThreadLocal<HashMap<String, SimpleDateFormat>>() {
+        override fun initialValue() = HashMap<String, SimpleDateFormat>()
+    }
+
+    private fun fmt(pattern: String, ts: Long): String {
+        val cache = formats.get()!!
+        val f = cache.getOrPut(pattern) { SimpleDateFormat(pattern, Locale.ENGLISH) }
+        return f.format(Date(ts)).lowercase(Locale.ENGLISH)
+    }
 
     fun dayLabel(ts: Long): String = fmt("EEE dd MMM", ts)
 
