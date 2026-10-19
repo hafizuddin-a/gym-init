@@ -95,7 +95,7 @@ fun HomeScreen(vm: AppViewModel) {
                         Mono("// no sessions yet — tap [+] new session", color = th.muted)
                     }
                 }
-                if (vm.hasDraft) {
+                vm.inProgress?.let { progress ->
                     HLine()
                     Box(
                         Modifier.fillMaxWidth().background(th.surf).padding(horizontal = 10.dp, vertical = 8.dp),
@@ -112,20 +112,20 @@ fun HomeScreen(vm: AppViewModel) {
                         Box(
                             Modifier.width(96.dp).fillMaxHeight().padding(horizontal = 10.dp),
                             contentAlignment = Alignment.CenterStart,
-                        ) { Mono(Fmt.dayLabel(vm.sessionTs), color = th.green, weight = FontWeight.Bold, maxLines = 1) }
+                        ) { Mono(Fmt.dayLabel(progress.timestamp), color = th.green, weight = FontWeight.Bold, maxLines = 1) }
                         VLine()
                         Box(
                             Modifier.weight(1f).fillMaxHeight().padding(horizontal = 10.dp),
                             contentAlignment = Alignment.CenterStart,
                         ) {
-                            val named = vm.draft.filter { it.name.isNotBlank() }
+                            val named = progress.rows.filter { it.name.isNotBlank() }
                             Mono(if (named.isEmpty()) "(unsaved)" else Fmt.summary(named), maxLines = 1)
                         }
                         VLine()
                         Box(
                             Modifier.width(84.dp).fillMaxHeight().padding(horizontal = 10.dp),
                             contentAlignment = Alignment.CenterEnd,
-                        ) { Mono(Fmt.kg(vm.draftVolume), weight = FontWeight.Bold, maxLines = 1) }
+                        ) { Mono(Fmt.kg(progress.volume), weight = FontWeight.Bold, maxLines = 1) }
                     }
                 }
                 var lastMonth = ""

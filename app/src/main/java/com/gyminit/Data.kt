@@ -24,7 +24,10 @@ data class Session(val id: Long, val timestamp: Long, val rows: List<LiftRow>) {
 }
 
 /** Unsaved workout, kept so it survives leaving the screen or the app being killed. */
-data class Draft(val editingId: Long?, val timestamp: Long, val rows: List<LiftRow>)
+data class Draft(val editingId: Long?, val timestamp: Long, val rows: List<LiftRow>) {
+    val volume: Double
+        get() = rows.sumOf { (it.weight.toDoubleOrNull() ?: 0.0) * (it.reps.toDoubleOrNull() ?: 0.0) }
+}
 
 /** Sessions live in one small JSON file; preferences hold the theme and rest time. */
 class Store(private val context: Context) {
