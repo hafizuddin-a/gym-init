@@ -194,9 +194,23 @@ object Fmt {
         return fmt(if (year == thisYear) "MMMM" else "MMMM yyyy", ts)
     }
 
+    /**
+     * One entry per exercise, however many sets (names compare ignoring case, first spelling wins).
+     * A hold shows its longest time, e.g. "plank 45s".
+     */
     fun summary(rows: List<LiftRow>): String {
-        val names = rows.map { if (it.hold) "${it.name} ${it.reps.ifEmpty { "0" }}s" else it.name }
-        return if (names.size <= 2) names.joinToString(", ") else names.take(2).joinToString(", ") + " +${names.size - 2}"
+        val names = LinkedHashMap<String, String>()
+        val longestHold = HashMap<String, Int>()
+        rows.forEach { r ->
+            val key = r.name.trim().lowercase()
+            if (key !in names) names[key] = r.name.trim()
+            if (r.hold) {
+                val sec = r.reps.toDoubleOrNull()?.toInt() ?: 0
+                if (sec > (longestHold[key] ?: -1)) longestHold[key] = sec
+            }
+        }
+        val labels = names.map { (key, shown) -> longestHold[key]?.let { "$shown ${it}s" } ?: shown }
+        return if (labels.size <= 2) labels.joinToString(", ") else labels.take(2).joinToString(", ") + " +${labels.size - 2}"
     }
 
     /** m:ss for a hold length. */

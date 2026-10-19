@@ -98,7 +98,7 @@ fun WorkoutScreen(vm: AppViewModel) {
                     VLine()
                     HeadCell("weight", Modifier.width(72.dp), pad = 8.dp)
                     VLine()
-                    HeadCell("reps/sec", Modifier.width(68.dp), size = 11, pad = 8.dp)
+                    HeadCell("reps/sec", Modifier.width(80.dp), size = 11, pad = 8.dp)
                     VLine()
                     Box(Modifier.width(32.dp))
                 }
@@ -118,7 +118,7 @@ fun WorkoutScreen(vm: AppViewModel) {
                         }
                     }
                     HLine()
-                    Row(Modifier.fillMaxWidth().height(56.dp)) {
+                    Row(Modifier.fillMaxWidth().height(48.dp)) {
                         Box(
                             Modifier.width(32.dp).fillMaxHeight().background(th.panel),
                             contentAlignment = Alignment.Center,
@@ -153,35 +153,33 @@ fun WorkoutScreen(vm: AppViewModel) {
                             Mono("kg", color = th.muted, size = 12)
                         }
                         VLine()
-                        Column(Modifier.width(68.dp).fillMaxHeight(), verticalArrangement = Arrangement.Center) {
+                        Row(
+                            Modifier.width(80.dp).fillMaxHeight().padding(start = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
                             val tint = if (row.hold) th.amber else th.blue
-                            Box(
-                                Modifier.fillMaxWidth().height(28.dp).padding(horizontal = 8.dp),
-                                contentAlignment = Alignment.BottomStart,
-                            ) {
-                                TermField(
-                                    value = row.reps,
-                                    onChange = { vm.updateRow(index, row.copy(reps = cleanNumber(it, decimal = false))) },
-                                    label = "Exercise ${index + 1} ${if (row.hold) "seconds" else "reps"}",
-                                    hint = "0",
-                                    numeric = true,
-                                    integer = true,
-                                    color = tint,
-                                    modifier = Modifier.fillMaxWidth(),
-                                )
-                            }
+                            TermField(
+                                value = row.reps,
+                                onChange = { vm.updateRow(index, row.copy(reps = cleanNumber(it, decimal = false))) },
+                                label = "Exercise ${index + 1} ${if (row.hold) "seconds" else "reps"}",
+                                hint = "0",
+                                numeric = true,
+                                integer = true,
+                                color = tint,
+                                modifier = Modifier.weight(1f),
+                            )
+                            // the unit sits on the same line as the number, like "kg"; tap it to switch
                             Box(
                                 Modifier
-                                    .fillMaxWidth()
-                                    .height(28.dp)
+                                    .width(36.dp)
+                                    .fillMaxHeight()
                                     .clickable(
                                         onClickLabel = if (row.hold) "Switch to reps" else "Switch to seconds",
                                         role = Role.Button,
-                                    ) { vm.updateRow(index, row.copy(hold = !row.hold)) }
-                                    .padding(horizontal = 8.dp),
-                                contentAlignment = Alignment.TopStart,
+                                    ) { vm.updateRow(index, row.copy(hold = !row.hold)) },
+                                contentAlignment = Alignment.Center,
                             ) {
-                                Mono(if (row.hold) "sec" else "reps", color = if (row.hold) th.amber else th.muted, size = 11, underline = true)
+                                Mono(if (row.hold) "sec" else "reps", color = if (row.hold) th.amber else th.muted, size = 12, underline = true)
                             }
                         }
                         VLine()
@@ -241,9 +239,9 @@ fun WorkoutScreen(vm: AppViewModel) {
                     }
                 }
                 Spacer(Modifier.height(6.dp))
-                val bestText = if (best > 0) " · best session: ${Fmt.kg(best)} kg" else ""
                 val holdText = if (holdRows > 0) " · $holdRows hold${if (holdRows == 1) "" else "s"}" else ""
-                Mono("// $lifts exercise${if (lifts == 1) "" else "s"}$holdText$bestText", color = th.muted)
+                Mono("// $lifts exercise${if (lifts == 1) "" else "s"}$holdText", color = th.muted)
+                if (best > 0) Mono("// best session: ${Fmt.kg(best)} kg", color = th.muted)
             }
         }
 
