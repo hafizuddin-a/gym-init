@@ -109,6 +109,17 @@ fun TimerScreen(vm: AppViewModel) {
             }
         }
 
+        if (vm.canAddTimer) {
+            val seconds = vm.timerHeldSeconds
+            TermButton(
+                "[add ${seconds}s to exercises]",
+                th.green,
+                { vm.addTimerToExercises() },
+                Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 8.dp),
+                height = 56.dp,
+            )
+        }
+
         Row(
             Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 16.dp, top = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),

@@ -73,9 +73,21 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         private set
 
     val draftVolume: Double
-        get() = draft.sumOf { (it.weight.toDoubleOrNull() ?: 0.0) * (it.reps.toDoubleOrNull() ?: 0.0) }
+        get() = draft.filter { !it.hold }.sumOf { (it.weight.toDoubleOrNull() ?: 0.0) * (it.reps.toDoubleOrNull() ?: 0.0) }
+    val draftHoldSeconds: Int
+        get() = draft.filter { it.hold }.sumOf { it.reps.toDoubleOrNull()?.toInt() ?: 0 }
     val bestVolume: Double
         get() = sessions.maxOfOrNull { it.volume } ?: 0.0
+    val bestHoldSeconds: Int
+        get() = sessions.maxOfOrNull { it.holdSeconds } ?: 0
+
+    /** Set when a row was just added from the stopwatch/timer: the workout screen focuses its name field. */
+    var focusRowId by mutableStateOf<Long?>(null)
+        private set
+
+    fun clearFocusRequest() {
+        focusRowId = null
+    }
 
     private fun LiftRow.isBlank() = name.isBlank() && weight.isBlank() && reps.isBlank()
 
@@ -220,10 +232,27 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         persistDraft()
     }
 
+    /**
+     * Adds a hold of [seconds] to the workout: fills the first blank row (or appends one), marks it
+     * as a hold, and asks the workout screen to focus its name field.
+     */
+    fun addHold(seconds: Int) {
+        val value = seconds.coerceAtLeast(1).toString()
+        val blank = draft.indexOfFirst { it.isBlank() }
+        val target = if (blank >= 0) {
+            draft[blank].copy(hold = true, reps = value).also { draft[blank] = it }
+        } else {
+            blankRow().copy(hold = true, reps = value).also { draft.add(it) }
+        }
+        focusRowId = target.id
+        persistDraft()
+        screen = Screen.Workout
+    }
+
     /** Writes the screen's rows into the sessions list (a new session or the one being edited). */
     private fun writeSession() {
         // keep any row with data, even without a name, so typed numbers are never dropped
-        val rows = draft.filter { !it.isBlank() }.map { it.copy(name = it.name.trim().ifEmpty { "unnamed" }) }
+        val rows = draft.filter { !it.isBlank() }.map { it.copy(name = it.name.trim().lowercase().ifEmpty { "unnamed" }) }
         if (rows.isNotEmpty()) {
             val id = editingId ?: System.currentTimeMillis()
             val saved = Session(id, sessionTs, rows)
@@ -314,6 +343,20 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         laps.clear()
     }
 
+    /** Whole seconds on the stopwatch (total elapsed, laps don't matter). */
+    val swHoldSeconds: Int
+        get() = Math.round(swElapsed / 1000.0).toInt()
+
+    /** True once the stopwatch has been paused with something worth logging. */
+    val canAddStopwatch: Boolean
+        get() = !swRunning && swHoldSeconds >= 1
+
+    fun addStopwatchToExercises() {
+        val seconds = swHoldSeconds
+        resetStopwatch()
+        addHold(seconds)
+    }
+
     // ---- rest timer ----
     var restSec by mutableIntStateOf(store.restSec.coerceIn(15, 900))
         private set
@@ -353,6 +396,20 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         timerDone = false
         timerBase = restSec * 1000L
         timerTotalMs = timerBase
+    }
+
+    /** Whole seconds the timer has run (goal minus what is left). */
+    val timerHeldSeconds: Int
+        get() = Math.round((timerTotalMs - timerRemaining).coerceAtLeast(0) / 1000.0).toInt()
+
+    /** True when the timer is paused or finished with something worth logging. */
+    val canAddTimer: Boolean
+        get() = !timerRunning && timerHeldSeconds >= 1
+
+    fun addTimerToExercises() {
+        val seconds = timerHeldSeconds
+        resetTimer()
+        addHold(seconds)
     }
 
     fun setRest(sec: Int) {

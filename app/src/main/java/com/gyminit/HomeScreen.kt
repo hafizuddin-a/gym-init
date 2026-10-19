@@ -147,12 +147,25 @@ fun HomeScreen(vm: AppViewModel) {
     // a saved session being continued (after an accidental save) lives in the in-progress section
     val activeId = if (vm.continuing) vm.editingId else null
 
+    // longest single hold per exercise (names compare ignoring case), best two shown on Home
+    val bestHolds = remember(sessions) {
+        val best = HashMap<String, Int>()
+        sessions.forEach { sess ->
+            sess.rows.filter { it.hold }.forEach { r ->
+                val sec = r.reps.toDoubleOrNull()?.toInt() ?: 0
+                val key = r.name.trim().lowercase()
+                if (sec > (best[key] ?: 0)) best[key] = sec
+            }
+        }
+        best.entries.sortedByDescending { it.value }.take(2).joinToString(" · ") { "${it.key} ${Fmt.holdClock(it.value)}" }
+    }
+
     val rows = remember(sessions, progress, activeId) {
         buildList {
             val active = sessions.firstOrNull { it.id == activeId }
             if (active != null || progress != null) add(HomeRow.ProgressHeader)
             if (active != null) {
-                add(HomeRow.Done(active, Fmt.dayLabel(active.timestamp), Fmt.summary(active.rows), Fmt.kg(active.volume), true))
+                add(HomeRow.Done(active, Fmt.dayLabel(active.timestamp), Fmt.summary(active.rows), Fmt.volumeCell(active.volume, active.holdSeconds), true))
             }
             if (progress != null) add(HomeRow.Progress(progress))
             if (sessions.isEmpty() && progress == null) add(HomeRow.Empty)
@@ -164,7 +177,7 @@ fun HomeScreen(vm: AppViewModel) {
                     lastMonth = key
                     add(HomeRow.Month(Fmt.monthLabel(s.timestamp)))
                 }
-                add(HomeRow.Done(s, Fmt.dayLabel(s.timestamp), Fmt.summary(s.rows), Fmt.kg(s.volume), false))
+                add(HomeRow.Done(s, Fmt.dayLabel(s.timestamp), Fmt.summary(s.rows), Fmt.volumeCell(s.volume, s.holdSeconds), false))
             }
         }
     }
@@ -220,7 +233,7 @@ fun HomeScreen(vm: AppViewModel) {
                             dateColor = th.green,
                             exercises = row.draft.rows.filter { it.name.isNotBlank() }
                                 .let { if (it.isEmpty()) "(unsaved)" else Fmt.summary(it) },
-                            volume = Fmt.kg(row.draft.volume),
+                            volume = Fmt.volumeCell(row.draft.volume, row.draft.holdSeconds),
                             clickLabel = "Resume unsaved session",
                             onClick = { vm.resume() },
                         )
@@ -245,6 +258,10 @@ fun HomeScreen(vm: AppViewModel) {
                         BlockBar(weeks, th.green)
                         Spacer(Modifier.width(8.dp))
                         Mono("${weeks.count { it }}/12", size = 14, weight = FontWeight.Bold, maxLines = 1)
+                    }
+                    if (bestHolds.isNotEmpty()) {
+                        Spacer(Modifier.height(6.dp))
+                        Mono("// best holds · $bestHolds", color = th.amber)
                     }
                 }
             }

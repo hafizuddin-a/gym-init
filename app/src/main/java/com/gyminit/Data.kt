@@ -16,17 +16,25 @@ data class LiftRow(
     val reps: String = "",
     val hintWeight: String = "",
     val hintReps: String = "",
+    /** An isometric hold: `reps` then means seconds, and the row stays out of the kg volume. */
+    val hold: Boolean = false,
 )
 
+private fun List<LiftRow>.kgVolume(): Double =
+    filter { !it.hold }.sumOf { (it.weight.toDoubleOrNull() ?: 0.0) * (it.reps.toDoubleOrNull() ?: 0.0) }
+
+private fun List<LiftRow>.holdTotal(): Int =
+    filter { it.hold }.sumOf { it.reps.toDoubleOrNull()?.toInt() ?: 0 }
+
 data class Session(val id: Long, val timestamp: Long, val rows: List<LiftRow>) {
-    val volume: Double
-        get() = rows.sumOf { (it.weight.toDoubleOrNull() ?: 0.0) * (it.reps.toDoubleOrNull() ?: 0.0) }
+    val volume: Double get() = rows.kgVolume()
+    val holdSeconds: Int get() = rows.holdTotal()
 }
 
 /** Unsaved workout, kept so it survives leaving the screen or the app being killed. */
 data class Draft(val editingId: Long?, val timestamp: Long, val rows: List<LiftRow>) {
-    val volume: Double
-        get() = rows.sumOf { (it.weight.toDoubleOrNull() ?: 0.0) * (it.reps.toDoubleOrNull() ?: 0.0) }
+    val volume: Double get() = rows.kgVolume()
+    val holdSeconds: Int get() = rows.holdTotal()
 }
 
 /** Sessions live in one small JSON file; preferences hold the theme and rest time. */
@@ -52,6 +60,7 @@ class Store(private val context: Context) {
                             name = r.getString("name"),
                             weight = r.getString("weight"),
                             reps = r.getString("reps"),
+                            hold = r.optBoolean("hold", false),
                         )
                     },
                 )
@@ -75,7 +84,8 @@ class Store(private val context: Context) {
                     JSONObject()
                         .put("name", r.name)
                         .put("weight", r.weight)
-                        .put("reps", r.reps),
+                        .put("reps", r.reps)
+                        .put("hold", r.hold),
                 )
             }
             arr.put(JSONObject().put("id", s.id).put("ts", s.timestamp).put("rows", rows))
@@ -117,6 +127,7 @@ class Store(private val context: Context) {
                         reps = r.getString("reps"),
                         hintWeight = r.optString("hw"),
                         hintReps = r.optString("hr"),
+                        hold = r.optBoolean("hold", false),
                     )
                 },
             )
@@ -131,7 +142,7 @@ class Store(private val context: Context) {
             rows.put(
                 JSONObject()
                     .put("name", r.name).put("weight", r.weight).put("reps", r.reps)
-                    .put("hw", r.hintWeight).put("hr", r.hintReps),
+                    .put("hw", r.hintWeight).put("hr", r.hintReps).put("hold", r.hold),
             )
         }
         val o = JSONObject().put("ts", draft.timestamp).put("rows", rows)
@@ -184,7 +195,14 @@ object Fmt {
     }
 
     fun summary(rows: List<LiftRow>): String {
-        val names = rows.map { it.name }
+        val names = rows.map { if (it.hold) "${it.name} ${it.reps.ifEmpty { "0" }}s" else it.name }
         return if (names.size <= 2) names.joinToString(", ") else names.take(2).joinToString(", ") + " +${names.size - 2}"
     }
+
+    /** m:ss for a hold length. */
+    fun holdClock(seconds: Int): String = String.format(Locale.US, "%d:%02d", seconds / 60, seconds % 60)
+
+    /** Volume cell: kg when there is any, otherwise the hold time, otherwise 0. */
+    fun volumeCell(volume: Double, holdSeconds: Int): String =
+        if (volume <= 0.0 && holdSeconds > 0) "${holdSeconds}s" else kg(volume)
 }

@@ -35,6 +35,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
@@ -51,6 +52,7 @@ fun Mono(
     maxLines: Int = Int.MAX_VALUE,
     align: TextAlign? = null,
     letterSpacing: TextUnit = TextUnit.Unspecified,
+    underline: Boolean = false,
 ) {
     Text(
         text = text,
@@ -63,6 +65,7 @@ fun Mono(
         overflow = TextOverflow.Ellipsis,
         textAlign = align,
         letterSpacing = letterSpacing,
+        textDecoration = if (underline) TextDecoration.Underline else null,
     )
 }
 
@@ -175,12 +178,12 @@ fun HLine() {
 
 /** Header cell of a spreadsheet-style table. */
 @Composable
-fun HeadCell(text: String, modifier: Modifier = Modifier, end: Boolean = false) {
+fun HeadCell(text: String, modifier: Modifier = Modifier, end: Boolean = false, size: Int = 12, pad: Dp = 10.dp) {
     Box(
-        modifier = modifier.fillMaxHeight().padding(horizontal = 10.dp),
+        modifier = modifier.fillMaxHeight().padding(horizontal = pad),
         contentAlignment = if (end) Alignment.CenterEnd else Alignment.CenterStart,
     ) {
-        Mono(text, color = LocalTheme.current.muted, size = 12, weight = FontWeight.Bold, maxLines = 1)
+        Mono(text, color = LocalTheme.current.muted, size = size, weight = FontWeight.Bold, maxLines = 1)
     }
 }
 
@@ -192,6 +195,7 @@ fun TermField(
     modifier: Modifier = Modifier,
     hint: String = "",
     numeric: Boolean = false,
+    integer: Boolean = false,
     color: Color = LocalTheme.current.fg,
 ) {
     val th = LocalTheme.current
@@ -209,7 +213,7 @@ fun TermField(
         cursorBrush = SolidColor(th.blue),
         keyboardOptions = KeyboardOptions(
             capitalization = KeyboardCapitalization.None,
-            keyboardType = if (numeric) KeyboardType.Decimal else KeyboardType.Text,
+            keyboardType = if (integer) KeyboardType.Number else if (numeric) KeyboardType.Decimal else KeyboardType.Text,
             imeAction = ImeAction.Next,
         ),
         decorationBox = { inner ->

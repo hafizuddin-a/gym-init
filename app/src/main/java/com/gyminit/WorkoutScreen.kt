@@ -3,6 +3,7 @@ package com.gyminit
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -21,12 +22,17 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import kotlinx.coroutines.delay
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -90,15 +96,29 @@ fun WorkoutScreen(vm: AppViewModel) {
                     VLine()
                     HeadCell("exercise", Modifier.weight(1f))
                     VLine()
-                    HeadCell("weight", Modifier.width(84.dp))
+                    HeadCell("weight", Modifier.width(72.dp), pad = 8.dp)
                     VLine()
-                    HeadCell("reps", Modifier.width(52.dp))
+                    HeadCell("reps/sec", Modifier.width(68.dp), size = 11, pad = 8.dp)
                     VLine()
                     Box(Modifier.width(32.dp))
                 }
                 vm.draft.forEachIndexed { index, row ->
+                    val focus = remember(row.id) { FocusRequester() }
+                    val keyboard = LocalSoftwareKeyboardController.current
+                    // a row added from the stopwatch/timer gets the cursor in its name field
+                    LaunchedEffect(vm.focusRowId) {
+                        if (vm.focusRowId == row.id) {
+                            delay(80)
+                            try {
+                                focus.requestFocus()
+                                keyboard?.show()
+                            } catch (_: Exception) {
+                            }
+                            vm.clearFocusRequest()
+                        }
+                    }
                     HLine()
-                    Row(Modifier.fillMaxWidth().height(48.dp)) {
+                    Row(Modifier.fillMaxWidth().height(56.dp)) {
                         Box(
                             Modifier.width(32.dp).fillMaxHeight().background(th.panel),
                             contentAlignment = Alignment.Center,
@@ -113,12 +133,12 @@ fun WorkoutScreen(vm: AppViewModel) {
                                 onChange = { vm.updateRow(index, row.copy(name = it)) },
                                 label = "Exercise ${index + 1} name",
                                 hint = "exercise",
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier.fillMaxWidth().focusRequester(focus),
                             )
                         }
                         VLine()
                         Row(
-                            Modifier.width(84.dp).fillMaxHeight().padding(horizontal = 10.dp),
+                            Modifier.width(72.dp).fillMaxHeight().padding(horizontal = 8.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             TermField(
@@ -133,19 +153,36 @@ fun WorkoutScreen(vm: AppViewModel) {
                             Mono("kg", color = th.muted, size = 12)
                         }
                         VLine()
-                        Box(
-                            Modifier.width(52.dp).fillMaxHeight().padding(horizontal = 10.dp),
-                            contentAlignment = Alignment.CenterStart,
-                        ) {
-                            TermField(
-                                value = row.reps,
-                                onChange = { vm.updateRow(index, row.copy(reps = cleanNumber(it, decimal = false))) },
-                                label = "Exercise ${index + 1} reps",
-                                hint = row.hintReps.ifEmpty { "0" },
-                                numeric = true,
-                                color = th.blue,
-                                modifier = Modifier.fillMaxWidth(),
-                            )
+                        Column(Modifier.width(68.dp).fillMaxHeight(), verticalArrangement = Arrangement.Center) {
+                            val tint = if (row.hold) th.amber else th.blue
+                            Box(
+                                Modifier.fillMaxWidth().height(28.dp).padding(horizontal = 8.dp),
+                                contentAlignment = Alignment.BottomStart,
+                            ) {
+                                TermField(
+                                    value = row.reps,
+                                    onChange = { vm.updateRow(index, row.copy(reps = cleanNumber(it, decimal = false))) },
+                                    label = "Exercise ${index + 1} ${if (row.hold) "seconds" else "reps"}",
+                                    hint = "0",
+                                    numeric = true,
+                                    integer = true,
+                                    color = tint,
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
+                            }
+                            Box(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .height(28.dp)
+                                    .clickable(
+                                        onClickLabel = if (row.hold) "Switch to reps" else "Switch to seconds",
+                                        role = Role.Button,
+                                    ) { vm.updateRow(index, row.copy(hold = !row.hold)) }
+                                    .padding(horizontal = 8.dp),
+                                contentAlignment = Alignment.TopStart,
+                            ) {
+                                Mono(if (row.hold) "sec" else "reps", color = if (row.hold) th.amber else th.muted, size = 11, underline = true)
+                            }
                         }
                         VLine()
                         Box(
@@ -180,7 +217,11 @@ fun WorkoutScreen(vm: AppViewModel) {
             val volume = vm.draftVolume
             val best = vm.bestVolume
             val ratio = if (maxOf(volume, best) > 0) (volume / maxOf(volume, best)).toFloat() else 0f
-            val count = vm.draft.count { it.name.isNotBlank() }
+            val holds = vm.draftHoldSeconds
+            val bestHold = vm.bestHoldSeconds
+            val holdRatio = if (maxOf(holds, bestHold) > 0) holds / maxOf(holds, bestHold).toFloat() else 0f
+            val lifts = vm.draft.count { it.name.isNotBlank() && !it.hold }
+            val holdRows = vm.draft.count { it.hold && (it.name.isNotBlank() || it.reps.isNotBlank()) }
             Column(Modifier.padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 12.dp)) {
                 Mono("// volume", color = th.muted)
                 Spacer(Modifier.height(6.dp))
@@ -189,9 +230,20 @@ fun WorkoutScreen(vm: AppViewModel) {
                     Spacer(Modifier.width(8.dp))
                     Mono("${Fmt.kg(volume)} kg", size = 14, weight = FontWeight.Bold, maxLines = 1)
                 }
+                if (holds > 0) {
+                    Spacer(Modifier.height(10.dp))
+                    Mono("// holds", color = th.muted)
+                    Spacer(Modifier.height(6.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        BlockBar(holdRatio, 16, th.amber)
+                        Spacer(Modifier.width(8.dp))
+                        Mono("$holds s", size = 14, weight = FontWeight.Bold, maxLines = 1)
+                    }
+                }
                 Spacer(Modifier.height(6.dp))
                 val bestText = if (best > 0) " · best session: ${Fmt.kg(best)} kg" else ""
-                Mono("// $count exercise${if (count == 1) "" else "s"}$bestText", color = th.muted)
+                val holdText = if (holdRows > 0) " · $holdRows hold${if (holdRows == 1) "" else "s"}" else ""
+                Mono("// $lifts exercise${if (lifts == 1) "" else "s"}$holdText$bestText", color = th.muted)
             }
         }
 

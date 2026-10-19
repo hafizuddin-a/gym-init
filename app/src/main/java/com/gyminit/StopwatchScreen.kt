@@ -134,6 +134,18 @@ fun StopwatchScreen(vm: AppViewModel) {
             }
         }
 
+        if (vm.canAddStopwatch) {
+            val seconds = vm.swHoldSeconds
+            Mono("// stopped at ${seconds}s", color = th.muted, modifier = Modifier.padding(start = 20.dp, top = 8.dp, bottom = 8.dp))
+            TermButton(
+                "[add ${seconds}s to exercises]",
+                th.green,
+                { vm.addStopwatchToExercises() },
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                height = 56.dp,
+            )
+        }
+
         Row(
             Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 16.dp, top = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
