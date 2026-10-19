@@ -144,24 +144,27 @@ fun HomeScreen(vm: AppViewModel) {
         }
     }
 
-    // the saved session being continued is shown in the in-progress colour
+    // a saved session being continued (after an accidental save) lives in the in-progress section
     val activeId = if (vm.continuing) vm.editingId else null
 
     val rows = remember(sessions, progress, activeId) {
         buildList {
-            if (progress != null) {
-                add(HomeRow.ProgressHeader)
-                add(HomeRow.Progress(progress))
+            val active = sessions.firstOrNull { it.id == activeId }
+            if (active != null || progress != null) add(HomeRow.ProgressHeader)
+            if (active != null) {
+                add(HomeRow.Done(active, Fmt.dayLabel(active.timestamp), Fmt.summary(active.rows), Fmt.kg(active.volume), true))
             }
+            if (progress != null) add(HomeRow.Progress(progress))
             if (sessions.isEmpty() && progress == null) add(HomeRow.Empty)
             var lastMonth = ""
             sessions.forEach { s ->
+                if (s.id == activeId) return@forEach
                 val key = Fmt.monthKey(s.timestamp)
                 if (key != lastMonth) {
                     lastMonth = key
                     add(HomeRow.Month(Fmt.monthLabel(s.timestamp)))
                 }
-                add(HomeRow.Done(s, Fmt.dayLabel(s.timestamp), Fmt.summary(s.rows), Fmt.kg(s.volume), s.id == activeId))
+                add(HomeRow.Done(s, Fmt.dayLabel(s.timestamp), Fmt.summary(s.rows), Fmt.kg(s.volume), false))
             }
         }
     }
@@ -227,7 +230,7 @@ fun HomeScreen(vm: AppViewModel) {
                             dateColor = if (row.active) th.green else th.blue,
                             exercises = row.exercises,
                             volume = row.volume,
-                            clickLabel = null,
+                            clickLabel = if (row.active) "Continue session" else null,
                             onClick = { vm.edit(row.session) },
                         )
                     }
